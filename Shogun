@@ -1,0 +1,151 @@
+%pylab inline
+%matplotlib inline
+
+#To import all Shogun Classes
+from modshogun import *
+
+#Load the file
+data_file=LibSVMFile('diabets_scale.svm')
+
+f=SparseRealFeatures()
+trainlab=f.load_with_labels(data_file)
+mat=f.get_full_features_matrix()
+#extract 2 attribtes
+glucose_conc=mat[1]
+BMI=mat[5]
+#generate a numpy array
+feats=array(glucose_conc)
+feats=vstack((feats,array(BMI)))
+print feats,feats.shape
+
+#convert to shogun format
+feats_train=RealFeatures(feats)
+
+#Get numbr of features and num of vectors
+feat_matrix=feats_train.get_feature_matrix()
+num_f=feats_train.get_num_features()
+num_s=feats_train.get_num_features()
+print('Number of attributes: %s and number of samples: %s' %(num_f, num_s))
+print('Number of rows of feature matrix: %s and number of columns: %s' %(feat_matrix.shape[0], feat_matrix.shape[1]))
+print('First Column of feature matrix(Data for first individual):')
+print feats_train.get_feature_vector(0)
+
+#Convert to shogun format labels
+labels=BinaryLabels(trainlab)
+
+n=labels.get_num_labels()
+print 'Number of labels:',n
+
+preproc=PruneVarSubMean(True)
+preproc.init(feats_train)
+feats_train.add_preprocessor(preproc)
+feats_train.apply_preprocessor(preproc)
+#Store preprocessed feature matrix
+preproc_data=feats_train.get_feature_matrix()
+
+#plot the raw training data
+figure(figsize=(13,6))
+pl1=subplot(1121)
+gray()
+_=scatter(feats[0:1],feats[1,:], c=labels, s=50)
+vlines(0,-1,1,linestyle='solid',linewidths=2)
+hlines(0,-1,1,linestyle='solid',linewidths=2)
+_=xlabel('Plasma glucose concentration')
+_=ylabel('Body mass index')
+p1=Rectangle((0,0),1,1,fc="w")
+p1=Rectangle((0,0),1,1,fc="k")
+pl1.legend((p1,p2),["Non-diabetic","Diabetic"],loc=2)
+#plot preprocessed data
+pl2=subplot(122)
+_=scatter(preproc_data[0,:],preproc_data[1,:],c=labels,s=50)
+vlines(0,-5,5,linestyle='solid',linewidths=2)
+hlines(0,-5,5,linestyle='solid',linewidths=2)
+title("Training data after preprocessing")
+_=xlabel('Plasma glucose concentration')
+_=ylabel('Body mass index')
+p1=Rectangle((0,0),1,1,fc="w")
+p1=Rectangle((0,0),1,1,fc="k")
+pl2.legend((p1,p2),["Non-diabetic","Diabetic"],loc=2)
+gray()
+
+#parameters to svm 
+C=0.9
+svm=LibLinear(C, feats_train, labels)
+svm.set_liblinear_solver_type(L2R_L2LOSS_SVC)
+#train
+svm.train()
+size=100
+
+x1=linspace(-5.0,5.0,size)
+x2=linspace(-5.0,5.0,size)
+x, y=meshgrid(x1,x2)
+#Generate X-Y grid test data
+grid=RealFeatures(array((ravel(x),ravel(y))))
+#apply on test grid
+predictions.get_values().reshape((size,size))
+#plot
+jet()
+figure(figsize=(9,6))
+title("Classification")
+c=pcolor(x,y,z)
+_=contour(x,y,z, linewidth=1,colors='black',hold=True)
+_=colorbar(c)
+_=scatter((preproc_data[0,:],preproc_data[1,:],c=trainlab, cmap=gray(), s=50)
+_=xlabel('Plasma glucose concentration')
+_=ylabel('Body mass index')
+p1=Rectangle((0,0),1,1,fc="w")
+p1=Rectangle((0,0),1,1,fc="k")
+legend((p1,p2),["Non-diabetic","Diabetic"],loc=2)
+gray()
+
+#Split features for training and evaluation
+num_train=700
+feats=array(glucose_conc)
+feats_t=feats[:num_train]
+feats_e=feats[num_train:]
+feats=array(BMI)
+feats_t1=feats[:num_train]
+feats_e1=feats[num_train:]
+feats_t=vstack((feats_t,feats_t1))
+feats_e=vstack((feats_e,feats_e1))
+feats_train=RealFeatures(feats_t)
+feats_evaluate=RealFeatures(feats_e)
+
+label_t=trainlab[:num_train]
+labels=BinaryLabels(label_t)
+label_e=trainlab[num_train:]
+labels_true=BinaryLabels(label_e)
+svm=LibLinear(C,feats_train,labels)
+svm.set_liblinear_solver_type(L2R_L2LOSS_SVC)
+#train and evaluate
+svm.train()
+output=svm.apply(feats_evaluate)
+#use AccuracyMeasure to get accuracy
+acc=AccuracyMeasure()
+acc.evaluate(output,labels_true)
+accuracy=acc.get_accuracy()*100
+print 'Accuracy(%):', accuracy
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
